@@ -49,9 +49,9 @@ def schedule_meeting(service):
     summary = "Team Sync Meeting"
     location = "Virtual Meeting Room"
     description = "Discuss project updates and next steps"
-    start_time = "2024-05-19T10:00:00-04:00"
-    end_time = "2024-05-19T11:00:00-04:00"
-    attendees_emails = ["namrata86.ram@icloud.com", "tamotowndrow@outlook.com"]
+    start_time = "2024-05-14T16:00:00-04:00"
+    end_time = "2024-05-14T17:00:00-04:00"
+    attendees_emails = ["rkrall@linkedin.com", "tamotowndrow@outlook.com"]
 
     create_event(
         service, summary, location, description, start_time, end_time, attendees_emails
