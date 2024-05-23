@@ -4,7 +4,8 @@ from google.oauth2.credentials import Credentials
 from google.auth.transport.requests import Request
 from datetime import datetime, timedelta, timezone
 import os
-
+import pytz
+from dateutil import parser
 
 SCOPES = ["https://www.googleapis.com/auth/calendar"]
 
@@ -29,23 +30,24 @@ def authenticate_google_api():
     return service
 
 
-def convert_utc_timezone(time):
-    time_utc = time.replace(tzinfo=timezone.utc)
-    formatted_time_utc = time_utc.strftime("%Y-%m-%dT%H:%M:%S") + "Z"
-    return formatted_time_utc
+def convert_time_to_timezone(time, timezone):
+    return time.astimezone(pytz.timezone(timezone))
 
 
 def get_available_slots(calendar_id, start_time, end_time, duration_minutes):
     service = authenticate_google_api()
 
-    time_min = convert_utc_timezone(start_time)
-    time_max = convert_utc_timezone(end_time)
+    calendar = service.calendars().get(calendarId="09straight@gmail.com").execute()
+    calendar_timezone = calendar.get("timeZone")
+
+    start_time = convert_time_to_timezone(start_time, calendar_timezone)
+    end_time = convert_time_to_timezone(end_time, calendar_timezone)
 
     request_body = {
-        "timeMin": time_min,
-        "timeMax": time_max,
+        "timeMin": start_time.isoformat(),
+        "timeMax": end_time.isoformat(),
         "items": [{"id": calendar_id}],
-        "timeZone": "America/New_York",
+        "timeZone": calendar_timezone,
     }
 
     response = service.freebusy().query(body=request_body).execute()
@@ -57,11 +59,12 @@ def get_available_slots(calendar_id, start_time, end_time, duration_minutes):
     while current_time < end_time:
         slot_end = current_time + timedelta(minutes=duration_minutes)
 
-        current_time_utc = convert_utc_timezone(current_time)
-        slot_end_utc = convert_utc_timezone(slot_end)
+        current_time_utc = convert_time_to_timezone(current_time, "UTC")
+        slot_end_utc = convert_time_to_timezone(slot_end, "UTC")
 
         if all(
-            slot_end_utc <= busy_slot["start"] or current_time_utc >= busy_slot["end"]
+            slot_end_utc <= parser.parse(busy_slot["start"])
+            or current_time_utc >= parser.parse(busy_slot["end"])
             for busy_slot in busy_slots
         ):
             available_slots.append((current_time, slot_end))
@@ -69,6 +72,16 @@ def get_available_slots(calendar_id, start_time, end_time, duration_minutes):
         current_time += timedelta(minutes=duration_minutes)
 
     return available_slots
+
+
+calendar_id = "09straight@gmail.com"
+start_time = datetime(2024, 5, 19, 9, 0)
+end_time = datetime(2024, 5, 19, 15, 0)
+duration_minutes = 60
+available_slots = get_available_slots(
+    calendar_id, start_time, end_time, duration_minutes
+)
+print(available_slots)
 
 
 def create_event(
@@ -110,12 +123,3 @@ def schedule_meeting():
     attendees_emails = ["rkrall@linkedin.com", "tamotowndrow@outlook.com"]
 
     create_event(summary, location, description, start_time, end_time, attendees_emails)
-
-
-calendar_id = "9wperfect@gmail.com"
-start_time = datetime(2024, 5, 21, 9, 0)
-end_time = datetime(2024, 5, 21, 18, 0)
-duration_minutes = 60
-available_slots = get_available_slots(
-    calendar_id, start_time, end_time, duration_minutes
-)
